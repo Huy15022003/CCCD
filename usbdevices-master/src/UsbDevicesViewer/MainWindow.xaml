@@ -1,0 +1,582 @@
+﻿<Window x:Class="UsbDevicesViewer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:UsbDevicesViewer"
+        xmlns:vurdalakov="clr-namespace:Vurdalakov"
+        Title="{Binding ApplicationTitleAndVersion}" Icon="Images/application.ico"
+        Width="1200" Height="800">
+    
+    <Window.InputBindings>
+        <KeyBinding Key="X" Modifiers="Alt" Command="{Binding ExitCommand}" />
+        <KeyBinding Key="F5" Modifiers="" Command="{Binding RefreshCommand}" />
+    </Window.InputBindings>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="{Binding PropertiesHeight}"/>
+            <RowDefinition Height="Auto"/>  
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0">
+            <Menu ToolBar.OverflowMode="Never">
+                <MenuItem Header="_File">
+                    <MenuItem Header="E_xit" InputGestureText="Alt+X" Command="{Binding ExitCommand}" />
+                </MenuItem>
+                <MenuItem Header="_View">
+                    <MenuItem Header="_Refresh" InputGestureText="F5" Command="{Binding RefreshCommand}" />
+                </MenuItem>
+                <MenuItem Header="_Options">
+                    <MenuItem Header="Refresh on _Device Management events" IsChecked="{Binding RefreshListOnDeviceManagementEvents}" IsCheckable="True" />
+                    <MenuItem Header="Refresh on _WMI events" IsChecked="{Binding RefreshListOnWmiEvents}" IsCheckable="True" />
+                    <Separator />
+                    <MenuItem Header="_Autoselect connected device" IsChecked="{Binding SelectConnectedDevice}" IsCheckable="True" />
+                </MenuItem>
+                <MenuItem Header="_Help">
+                    <MenuItem Header="_About..." Command="{Binding AboutCommand}" />
+                </MenuItem>
+            </Menu>
+        </DockPanel>
+
+        <!--DockPanel Grid.Row="1">
+            <ToolBarPanel DockPanel.Dock="Top">
+                <ToolBar ToolBarTray.IsLocked="True">
+                    <Button Margin="8,0,8,0" Command="{Binding RefreshCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="Images/toolbar_refresh.png" Height="24"/>
+                            <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Grid Margin="8,0,8,0">
+                        <CheckBox Content="Refresh on Device Management events" IsChecked="{Binding RefreshListOnDeviceManagementEvents}" VerticalAlignment="Center" />
+                    </Grid>
+                    <Grid Margin="8,0,8,0">
+                        <CheckBox Content="Refresh on WMI events" IsChecked="{Binding RefreshListOnWmiEvents}" VerticalAlignment="Center" />
+                    </Grid>
+                    <Grid Margin="8,0,8,0">
+                        <CheckBox Content="Select connected device" IsChecked="{Binding SelectConnectedDevice}" VerticalAlignment="Center" />
+                    </Grid>
+                </ToolBar>
+            </ToolBarPanel>
+        </DockPanel-->
+
+        <TabControl Grid.Row="2" SelectedIndex="{Binding SelectedDeviceType}">
+
+            <TabControl.Template>
+                <ControlTemplate TargetType="{x:Type TabControl}">
+                    <Grid ClipToBounds="True" KeyboardNavigation.TabNavigation="Local" SnapsToDevicePixels="True">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="0"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Column="0" Grid.Row="0" Margin="2,2,2,0" Panel.ZIndex="1" IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
+                        <Border Grid.Column="0" Grid.Row="1" Background="{TemplateBinding Panel.Background}" BorderBrush="{TemplateBinding Border.BorderBrush}" BorderThickness="{TemplateBinding Border.BorderThickness}" KeyboardNavigation.DirectionalNavigation="Contained" KeyboardNavigation.TabIndex="2" KeyboardNavigation.TabNavigation="Local">
+                            <ContentPresenter Margin="{TemplateBinding Control.Padding}" Content="{TemplateBinding TabControl.SelectedContent}" ContentSource="SelectedContent" ContentStringFormat="{TemplateBinding TabControl.SelectedContentStringFormat}" ContentTemplate="{TemplateBinding TabControl.SelectedContentTemplate}" SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </TabControl.Template>
+            
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Width="12" Height="12" Source="Images/usbdevice.png" Margin="-1,0,4,0"/>
+                        <TextBlock>
+                            <Run Text="USB Devices ("/><Run Text="{Binding UsbDevices.Count, Mode=OneWay}"/><Run Text=")"/>
+                        </TextBlock>
+                    </StackPanel>
+                </TabItem.Header>
+                <ListView ItemsSource="{Binding UsbDevices}" SelectedItem="{Binding SelectedUsbDevice, Mode=TwoWay}" ScrollViewer.CanContentScroll="False" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}}">
+                    <ListView.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="Copy VID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1001"/>
+                            <MenuItem Header="Copy PID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1002"/>
+                            <MenuItem Header="Copy Hub And Port" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1003"/>
+                            <MenuItem Header="Copy Description" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1004"/>
+                            <MenuItem Header="Copy Device ID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1005"/>
+                            <MenuItem Header="Copy Device Path" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1006"/>
+                        </ContextMenu>
+                    </ListView.ContextMenu>
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="true">
+                            <GridViewColumn Header="VID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Vid}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="PID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Pid}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Hub:Port" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding HubAndPort}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Description" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Description}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Device ID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DeviceId}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Device Path" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DevicePath}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Width="12" Height="12" Source="Images/usbhub.png" Margin="-1,0,4,0"/>
+                        <TextBlock>
+                            <Run Text="USB Hubs ("/><Run Text="{Binding UsbHubs.Count, Mode=OneWay}"/><Run Text=")"/>
+                        </TextBlock>
+                    </StackPanel>
+                </TabItem.Header>
+                <ListView ItemsSource="{Binding UsbHubs}" SelectedItem="{Binding SelectedUsbHub, Mode=TwoWay}" ScrollViewer.CanContentScroll="False" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}}">
+                    <ListView.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="Copy VID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1101"/>
+                            <MenuItem Header="Copy PID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1102"/>
+                            <MenuItem Header="Copy Hub And Port" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1103"/>
+                            <MenuItem Header="Copy Description" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1104"/>
+                            <MenuItem Header="Copy Device ID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1105"/>
+                            <MenuItem Header="Copy Device Path" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1106"/>
+                        </ContextMenu>
+                    </ListView.ContextMenu>
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="true">
+                            <GridViewColumn Header="VID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Vid}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="PID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Pid}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Hub:Port" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding HubAndPort}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Description" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Description}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Device ID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DeviceId}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Device Path" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DevicePath}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Width="12" Height="12" Source="Images/usbcontroller.png" Margin="-1,0,4,0"/>
+                        <TextBlock>
+                            <Run Text="USB Host Controllers ("/><Run Text="{Binding UsbHostControllers.Count, Mode=OneWay}"/><Run Text=")"/>
+                        </TextBlock>
+                    </StackPanel>
+                </TabItem.Header>
+                <ListView ItemsSource="{Binding UsbHostControllers}" SelectedItem="{Binding SelectedUsbHostController, Mode=TwoWay}" ScrollViewer.CanContentScroll="False" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}}">
+                    <ListView.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="Copy Description" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1204"/>
+                            <MenuItem Header="Copy Device ID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1205"/>
+                            <MenuItem Header="Copy Device Path" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1206"/>
+                        </ContextMenu>
+                    </ListView.ContextMenu>
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="true">
+                            <GridViewColumn Header="Description" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Description}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Device ID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DeviceId}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Device Path" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DevicePath}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Text="USB Tree" />
+                </TabItem.Header>
+                <TreeView ItemsSource="{Binding UsbTreeItems}" vurdalakov:TreeViewSelectedItemBehavior.SelectedItem="{Binding SelectedUsbTreeItem, Mode=TwoWay}" vurdalakov:TreeViewSelectedItemBehavior.Attach="True">
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate DataType="{x:Type local:UsbDeviceViewModel}" ItemsSource="{Binding TreeViewItems}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Width="12" Height="12" Source="{Binding TreeViewIcon}" Margin="-1,0,4,0"/>
+                                <TextBlock Text="{Binding TreeViewTitle}" />
+                            </StackPanel>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="{x:Type TreeViewItem}">
+                            <Setter Property="IsExpanded" Value="True" />
+                        </Style>
+                    </TreeView.ItemContainerStyle>
+                </TreeView>
+            </TabItem>
+
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Text="USB Report" />
+                </TabItem.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <!-- Thêm dòng mới cho DataGrid -->
+                        <RowDefinition Height="5" />
+                        <!-- Dòng cho GridSplitter -->
+                        <RowDefinition Height="*" />
+                        <!-- TreeView -->
+                        <RowDefinition Height="5" />
+                        <!-- Dòng cho GridSplitter -->
+                        <RowDefinition Height="200" />
+                        <!-- Chi tiết thiết bị -->
+                    </Grid.RowDefinitions>
+
+                    <!-- DataGrid hiển thị trạng thái thiết bị -->
+                    <DataGrid Grid.Row="0" 
+                 ItemsSource="{Binding DeviceStatuses}" 
+                 AutoGenerateColumns="False" 
+                 Margin="5" 
+                 Padding="10,5" 
+                 IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Device ID" 
+                                   Binding="{Binding DeviceId}" 
+                                   Width="*" />
+                            <DataGridTextColumn Header="Description" 
+                                   Binding="{Binding Description}" 
+                                   Width="*" />
+                            <DataGridTextColumn Header="Status" 
+                                   Binding="{Binding IsConnected, Converter={StaticResource BooleanToStringConverter}}" 
+                                   Width="100" />
+                            <DataGridTextColumn Header="Last Event" 
+                                   Binding="{Binding LastEvent}" 
+                                   Width="100" />
+                            <DataGridTextColumn Header="Last Event Time" 
+                                   Binding="{Binding LastEventTime}" 
+                                   Width="120" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <GridSplitter Grid.Row="1" ResizeBehavior="PreviousAndNext" Height="5" HorizontalAlignment="Stretch" />
+
+                    <!-- TreeView hiển thị cấu trúc cây -->
+                    <TreeView Grid.Row="2" ItemsSource="{Binding UsbTreeItems}" vurdalakov:TreeViewSelectedItemBehavior.SelectedItem="{Binding SelectedUsbReportItem, Mode=TwoWay}" vurdalakov:TreeViewSelectedItemBehavior.Attach="True">
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate DataType="{x:Type local:UsbDeviceViewModel}" ItemsSource="{Binding TreeViewItems}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Width="12" Height="12" Source="{Binding TreeViewIcon}" Margin="-1,0,4,0"/>
+                                    <TextBlock Text="{Binding TreeViewTitle}" />
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="{x:Type TreeViewItem}">
+                                <Setter Property="IsExpanded" Value="True" />
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                    </TreeView>
+
+                    <GridSplitter Grid.Row="3" ResizeBehavior="PreviousAndNext" Height="5" HorizontalAlignment="Stretch" />
+
+                    <!-- Khu vực hiển thị thuộc tính chi tiết -->
+                    <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="5">
+                            <TextBlock Text="Chi tiết thiết bị:" FontWeight="Bold" Margin="0,0,0,5" />
+                            <TextBlock Text="{Binding SelectedUsbReportItem.HubAndPort, StringFormat='Hub and Port: {0}'}" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding SelectedUsbReportItem.Vid, StringFormat='VID: {0}'}" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding SelectedUsbReportItem.Pid, StringFormat='PID: {0}'}" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding SelectedUsbReportItem.Manufacturer, StringFormat='Manufacturer: {0}'}" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding SelectedUsbReportItem.SerialNumber, StringFormat='Serial Number: {0}'}" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding SelectedUsbReportItem.DevicePath, StringFormat='Device Path: {0}'}" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding SelectedUsbReportItem.DeviceId, StringFormat='Device ID: {0}'}" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding SelectedUsbReportItem.Description, StringFormat='Description: {0}'}" Margin="0,0,0,10" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
+            <TabItem HorizontalAlignment="Right" DockPanel.Dock="Right">
+                <TabItem.Header>
+                    <TextBlock>
+                        <Run Text="Device Events ("/><Run Text="{Binding DeviceEvents.Count, Mode=OneWay}"/><Run Text=")"/>
+                    </TextBlock>
+                </TabItem.Header>
+                <ListView ItemsSource="{Binding DeviceEvents}" SelectedItem="{Binding SelectedDeviceEvent, Mode=TwoWay}" ScrollViewer.CanContentScroll="False" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}}">
+                    <ListView.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="Clear" Command="{Binding PlacementTarget.Tag.ClearDeviceEventsCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                            <Separator />
+                            <MenuItem Header="Copy Time" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1301"/>
+                            <MenuItem Header="Copy Type" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1302"/>
+                            <MenuItem Header="Copy VID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1303"/>
+                            <MenuItem Header="Copy PID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1304"/>
+                            <MenuItem Header="Copy Hub And Port" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1305"/>
+                            <MenuItem Header="Copy Device ID or Device Path" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1306"/>
+                            <MenuItem Header="Copy Controller ID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="1307"/>
+                        </ContextMenu>
+                    </ListView.ContextMenu>
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="true">
+                            <GridViewColumn Header="Time" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Time, StringFormat=HH:mm:ss.ffff}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Type" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding EventType, Converter={StaticResource IntegerToDeviceEventTypeConverter}}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="VID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Vid}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="PID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Pid}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Hub:Port" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding HubAndPort}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Device ID or Device Path" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DeviceId}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Controller ID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding ControllerId}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+
+        </TabControl>
+
+        <GridSplitter Grid.Row="3" ResizeBehavior="PreviousAndNext" Height="5" HorizontalAlignment="Stretch" />
+
+        <TabControl Grid.Row="4">
+
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock>
+                        <Run Text="Device Properties ("/><Run Text="{Binding SelectedDevice.Properties.Count, Mode=OneWay}"/><Run Text=")"/>
+                    </TextBlock>
+                </TabItem.Header>
+                <ListView ItemsSource="{Binding SelectedDevice.Properties}" SelectedItem="{Binding SelectedProperty, Mode=TwoWay}" ScrollViewer.CanContentScroll="False" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}}" Margin="0,2,0,-2">
+                    <ListView.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="Copy Name" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="2001"/>
+                            <MenuItem Header="Copy Type" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="2002"/>
+                            <MenuItem Header="Copy Value" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="2003"/>
+                        </ContextMenu>
+                    </ListView.ContextMenu>
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="true">
+                            <GridViewColumn Header="Name" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Type" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Type}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Value" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Value}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock>
+                        <Run Text="Device Registry Properties ("/><Run Text="{Binding SelectedDevice.RegistryProperties.Count, Mode=OneWay}"/><Run Text=")"/>
+                    </TextBlock>
+                </TabItem.Header>
+                <ListView ItemsSource="{Binding SelectedDevice.RegistryProperties}" SelectedItem="{Binding SelectedRegistryProperty, Mode=TwoWay}" ScrollViewer.CanContentScroll="False" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}}">
+                    <ListView.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="Copy Name" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="3001"/>
+                            <MenuItem Header="Copy Type" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="3002"/>
+                            <MenuItem Header="Copy Value" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="3003"/>
+                        </ContextMenu>
+                    </ListView.ContextMenu>
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="true">
+                            <GridViewColumn Header="Name" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Type" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Type}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Value" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Value}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock>
+                        <Run Text="Device Interfaces ("/><Run Text="{Binding SelectedDevice.Interfaces.Count, Mode=OneWay}"/><Run Text=")"/>
+                    </TextBlock>
+                </TabItem.Header>
+                <ListView ItemsSource="{Binding SelectedDevice.Interfaces}" SelectedItem="{Binding SelectedInterface, Mode=TwoWay}" ScrollViewer.CanContentScroll="False" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}}" Margin="0,4,0,-4.4">
+                    <ListView.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="Copy Interface ID" Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" CommandParameter="4001"/>
+                        </ContextMenu>
+                    </ListView.ContextMenu>
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="true">
+                            <GridViewColumn Header="Interface ID" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Value}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+
+        </TabControl>
+        <StatusBar Grid.Row="5" HorizontalAlignment="Stretch">
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Summary}" />
+                </StackPanel>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
